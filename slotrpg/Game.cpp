@@ -1,7 +1,7 @@
 ﻿#include "Game.hpp"
 
 Game::Game()
-	: m_character(Point(1, 1)), m_state(GameState::Opening), m_currentEnemy(nullptr), m_playerTurn(true), m_defending(false), m_slotMachine(), m_defeatedBosses(0), m_scrollComplete(false), m_showEndingMessage(true), m_scrollPosition(Scene::Height()), m_endingStopwatch(StartImmediately::Yes), m_font(30) // フォントを初期化
+	: m_character(Point(1, 1)), m_state(GameState::Opening), m_currentEnemy(nullptr), m_playerTurn(true), m_defending(false), m_slotMachine(), m_defeatedBosses(0), m_scrollComplete(false), m_showEndingMessage(true), m_scrollPosition(Scene::Height()), m_endingStopwatch(StartImmediately::Yes), m_font(30)
 {
 	m_enemies = {
 		Enemy(Point(3, 3), U"Slime", 10, 5),
@@ -46,6 +46,14 @@ void Game::update()
 			m_state = GameState::Title;
 		}
 	}
+	else if (m_state == GameState::GameOver) // 新しい状態の処理
+	{
+		updateGameOver();
+		if (m_scrollComplete)
+		{
+			m_state = GameState::Title;
+		}
+	}
 	else if (m_state == GameState::Title)
 	{
 		updateTitle();
@@ -81,7 +89,7 @@ void Game::draw() const
 	{
 		drawBattleUI();
 	}
-	else if (m_state == GameState::Ending)
+	else if (m_state == GameState::Ending || m_state == GameState::GameOver) // 両方のシーンでスタッフロールを描画
 	{
 		Rect(0, 0, Scene::Width(), Scene::Height()).draw(Palette::Black);
 
@@ -261,8 +269,10 @@ void Game::handleEnemyTurn()
 		Print << U"Enemy attacked! Player HP: " << m_character.getHP();
 		if (m_character.getHP() <= 0)
 		{
-			Print << U"Game Over!";
-			System::Exit();
+			m_state = GameState::GameOver; // ゲームオーバー状態に遷移
+			m_scrollComplete = false;
+			m_endingStopwatch.restart();
+			m_scrollPosition = Scene::Height();
 		}
 		m_playerTurn = true;
 	}
@@ -270,19 +280,51 @@ void Game::handleEnemyTurn()
 
 void Game::updateEnding()
 {
-	// エンディングの処理
 	if (m_showEndingMessage)
 	{
-		if (m_endingStopwatch.sF() > 5.0) // 5秒後にスクロール開始
+		if (m_endingStopwatch.sF() > 5.0)
 		{
 			m_showEndingMessage = false;
 		}
 	}
 	else
 	{
-		m_scrollPosition -= Scene::DeltaTime() * 50; // スクロール速度
+		m_scrollPosition -= Scene::DeltaTime() * 50;
 
-		if (m_scrollPosition + 350 < 0) // スクロールが完了したかどうかをチェック
+		if (m_scrollPosition + 350 < 0)
+		{
+			m_scrollComplete = true;
+		}
+	}
+}
+
+void Game::updateGameOver()
+{
+	if (m_endingStopwatch.sF() < 5.0)
+	{
+		m_font(U"Game Over").drawAt(Scene::Center(), Palette::Red);
+	}
+	else
+	{
+		m_scrollPosition -= Scene::DeltaTime() * 50;
+
+		Array<String> credits = {
+			U"Game Over",
+			U"",
+			U"Developed by:",
+			U"- Developer A",
+			U"- Developer B",
+			U"- Developer C",
+			U"",
+			U"Better Luck Next Time!"
+		};
+
+		for (size_t i = 0; i < credits.size(); ++i)
+		{
+			m_font(credits[i]).drawAt(Scene::Width() / 2, m_scrollPosition + i * 50, Palette::White);
+		}
+
+		if (m_scrollPosition + credits.size() * 50 < 0)
 		{
 			m_scrollComplete = true;
 		}

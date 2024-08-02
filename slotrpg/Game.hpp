@@ -13,7 +13,8 @@ enum class GameState
 	Field,
 	Battle,
 	Ending,
-	Title
+	Title,
+	GameOver // 新しい状態を追加
 };
 
 class Game
@@ -29,6 +30,7 @@ private:
 	void updateBattle();
 	void updateEnding();
 	void updateTitle();
+	void updateGameOver(); // ゲームオーバーの処理を追加
 	void drawBattleUI() const;
 	void handlePlayerTurn();
 	void handleEnemyTurn();
@@ -48,5 +50,5 @@ private:
 	mutable bool m_showEndingMessage;
 	mutable Stopwatch m_endingStopwatch;
 	mutable double m_scrollPosition;
-	Font m_font; // フォントをメンバ変数として追加
+	Font m_font;
 };
